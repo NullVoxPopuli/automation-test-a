@@ -51,7 +51,7 @@ jobs:
           if [[ "${{ github.event.inputs.version }}" != "" ]]; then
             TAG="v${{ github.event.inputs.version }}"
             VERSION="${{ github.event.inputs.version }}"
-          elif [[ "${{ github.ref_name }}" != "" ]]; 
+          elif [[ "${{ github.ref_name }}" != "" ]]; then 
             TAG="${{github.ref_name}}"
             _version="${{github.ref_name}}"
             VERSION="${_version/v/''}"
