@@ -13,10 +13,17 @@ const ONLINE_EDITOR_FILES = path.join(__dirname, 'online-editors');
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const VARIANT = process.env.VARIANT;
 const VALID_VARIANT = ['javascript', 'typescript'];
+// const REPO = 'ember-cli/editor-output';
+const REPO = 'nullvoxpopuli/automation-test-b';
+const [, , version] = process.argv;
 
-if (!GITHUB_TOKEN) {
-  throw new Error('GITHUB_TOKEN must be set');
-}
+assert(GITHUB_TOKEN, 'GITHUB_TOKEN must be set');
+assert(
+  VALID_VARIANT.includes(VARIANT), 
+  `Invalid VARIANT env var specified: ${VARIANT}. Must be one of ${VALID_VARIANT}`
+);
+
+assert(version, 'a version must be provided as the first argument to this script.');
 
 /**
  * The editor output repos differ from the output repos in that
@@ -42,15 +49,12 @@ if (!GITHUB_TOKEN) {
  *    - a function that returns a list of objects containing the information
  *    - have a single loop that iterates over that doing all the git stuff
  */
-async function updateOnlineEditorRepos(tag) {
+async function updateOnlineEditorRepos(version) {
+  let tag = `v${version}`;
   let latestEC = await latestVersion('ember-cli');
-  let isLatest = tag === `v${latestEC}`;
+  let isLatest = version === latestEC;
 
-  if (!VALID_VARIANT.includes(VARIANT)) {
-    throw new Error(`Invalid VARIANT specified: ${VARIANT}`);
-  }
-
-  let repo = `https://${GITHUB_TOKEN}@github.com/ember-cli/editor-output.git`;
+  let repo = `https://github-actions:${GITHUB_TOKEN}@github.com/${REPO}.git`;
   let onlineEditors = ['stackblitz'];
 
   for (let command of ['new', 'addon']) {
@@ -78,7 +82,7 @@ async function updateOnlineEditorRepos(tag) {
     let projectType = command === 'new' ? 'app' : 'addon';
 
     let updatedOutputTmpDir = tmp.dirSync();
-    console.log(`Running ember ${command} ${name} (for ${VARIANT})`);
+    console.log(`Running npx ember-cli@${tag} ${command} ${name} (for ${VARIANT})`);
     await execa(
       'npx',
       [`ember-cli@${tag}`, command, name, `--skip-npm`, `--skip-git`, ...(isTypeScript ? ['--typescript'] : [])],
@@ -117,18 +121,11 @@ async function updateOnlineEditorRepos(tag) {
 
         console.log(`cloning ${repo} in to ${tmpdir.name}`);
         try {
-          await execa('git', ['clone', repo, `--branch=${editorBranch}`], {
-            cwd: tmpdir.name,
-          });
+          await execa.command(`git clone ${repo} --branch=${editorBranch}`, { cwd: tmpdir.name });
         } catch (e) {
-          // branch may not exist yet
-          await execa('git', ['clone', repo], {
-            cwd: tmpdir.name,
-          });
+          await execa.command(`git clone ${repo}`, { cwd: tmpdir.name });
+          await execa.command(`git switch -C ${editorBranch}`, { cwd: outputRepoPath });
         }
-
-        console.log('preparing updates for online editors');
-        await execa('git', ['switch', '-C', editorBranch], { cwd: outputRepoPath });
 
         console.log(`clearing ${repo} in ${outputRepoPath}`);
         await execa(`git`, [`rm`, `-rf`, `.`], {
@@ -157,8 +154,4 @@ async function updateOnlineEditorRepos(tag) {
   }
 }
 
-const [, , tag] = process.argv;
-
-assert(tag, 'a tag must be provided as the first argument to this script.');
-
-updateOnlineEditorRepos(tag);
+updateOnlineEditorRepos(version);
