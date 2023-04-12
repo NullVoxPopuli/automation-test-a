@@ -11,6 +11,7 @@ tmp.setGracefulCleanup();
 let tmpdir = tmp.dirSync();
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const REPO = 'nullvoxpopuli/automation-test-c';
 
 if (!GITHUB_TOKEN) {
   throw new Error('GITHUB_TOKEN must be set');
