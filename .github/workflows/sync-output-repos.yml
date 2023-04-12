@@ -62,6 +62,10 @@ jobs:
             echo "event.inputs.version = ${{ github.event.inputs.version }}"
             exit 1;
           fi
+      
+          if [[ "$VERSION" == v* ]]; then 
+            echo "version, $VERSION, may not start with a 'v' character"
+          fi
 
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
