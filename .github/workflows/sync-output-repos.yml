@@ -65,6 +65,7 @@ jobs:
       
           if [[ "$VERSION" == v* ]]; then 
             echo "version, $VERSION, may not start with a 'v' character"
+            exit 1;
           fi
 
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
