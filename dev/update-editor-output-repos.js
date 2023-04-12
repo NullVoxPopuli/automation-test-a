@@ -103,9 +103,6 @@ async function determineOutputs(version) {
     }
   }
 
-  console.log('Scenarios to update:', result);
-
-
   return result;
 }
 
@@ -165,19 +162,21 @@ async function generateOutputFiles({ name, projectType, variant, isTypeScript, t
   * but if a branch doesn't exist, we want to create it.
   */
 async function forceBranch(repoPath, { repo, editorBranch }) {
-  let outputRepoPath = path.join(repoPath, 'editor-output');
+  let outputName = 'editor-output';
+  let outputRepoPath = path.join(repoPath, outputName);
 
   console.log(`cloning ${repo} in to ${repoPath}`);
 
+  let { stdout: git } = await execa('which', ['git']);
+
   try {
-    await execa.command(`git clone ${repo} --branch=${editorBranch}`, { cwd: repoPath });
+    await execa.command(`${git} clone ${repo} --branch=${editorBranch} ${outputName}`, { cwd: repoPath });
   } catch (e) {
     console.log(`Branch does not exist -- creating fresh (local) repo.`);
 
-    await execa.command(`git clone ${repo}`, { cwd: repoPath });
-    await execa.command(`git switch -C ${editorBranch}`, { cwd: outputRepoPath, env: {
-      GIT_SSH_COMMAND: ''
-    } });
+    await execa.command(`${git} clone ${repo} ${outputName}`, { cwd: repoPath });
+    await execa('which', ['git'], { cwd: outputRepoPath });
+    await execa.command(`${git} switch -C ${editorBranch}`, { cwd: outputRepoPath });
   }
 
   return outputRepoPath;
@@ -207,7 +206,7 @@ async function updateOnlineEditorRepos(version) {
 
     let outputRepoPath = await forceBranch(tmpdir.name, info);
 
-    console.log(`clearing ${repo} in ${outputRepoPath}`);
+    console.log(`clearing repo content in ${outputRepoPath}`);
     await execa(`git`, [`rm`, `-rf`, `.`], {
       cwd: outputRepoPath,
     });
@@ -216,11 +215,11 @@ async function updateOnlineEditorRepos(version) {
     await fs.copy(generatedOutputPath, outputRepoPath);
 
     console.log('copying online editor files');
-    await fs.copy(path.join(ONLINE_EDITOR_FILES, onlineEditor), outputRepoPath);
+    await fs.copy(path.join(ONLINE_EDITOR_FILES, info.onlineEditor), outputRepoPath);
 
     console.log('commiting updates');
     await execa('git', ['add', '--all'], { cwd: outputRepoPath });
-    await execa('git', ['commit', '-m', tag], { cwd: outputRepoPath });
+    await execa('git', ['commit', '-m', info.tag], { cwd: outputRepoPath });
 
     await push(outputRepoPath, info);
   }
